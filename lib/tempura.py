@@ -132,7 +132,7 @@ class ObjectClassifier(nn.Module):
             if new_scores.shape[0] > 0:
                 new_labels = torch.argmax(new_scores, dim=1) + 1
             else:
-                new_labels = torch.tensor([], dtype=torch.long).cuda(0)
+                new_labels = torch.tensor([], dtype=torch.long)#.cuda(0)
 
             final_dists.append(scores)
             final_dists.append(new_scores)
@@ -191,7 +191,7 @@ class ObjectClassifier(nn.Module):
                 sequence_features = pad_sequence([obj_features[index] for index in indices[1:]], batch_first=True)
                 masks = (1-pad_sequence([torch.ones(len(index)) for index in indices[1:]], batch_first=True)).bool()
                 pos_index = pad_sequence(pos_index, batch_first=True)
-                obj_ = self.encoder_tran(self.positional_encoder(sequence_features, pos_index),src_key_padding_mask=masks.cuda())
+                obj_ = self.encoder_tran(self.positional_encoder(sequence_features, pos_index),src_key_padding_mask=masks)#.cuda())
                 obj_flat = torch.cat([obj[:len(index)]for index, obj in zip(indices[1:],obj_)])
                 indices_flat = torch.cat(indices[1:]).unsqueeze(1).repeat(1,obj_features.shape[1])
                 final_features.scatter_(0, indices_flat, obj_flat)
@@ -408,7 +408,7 @@ class ObjectClassifier(nn.Module):
                             keep = nms(cls_boxes[order, :], cls_scores[order], 0.6)  # hyperparameter
 
                             final_dists.append(cls_dists[keep.view(-1).long()])
-                            final_boxes.append(torch.cat((torch.tensor([[i]],dtype=torch.float).repeat(keep.shape[0],1).cuda(0), cls_boxes[order, :][keep.view(-1).long()]), 1))
+                            final_boxes.append(torch.cat((torch.tensor([[i]],dtype=torch.float).repeat(keep.shape[0],1), cls_boxes[order, :][keep.view(-1).long()]), 1))
                             final_feats.append(cls_feats[keep.view(-1).long()])
                             final_mem_feats.append(cls_mem_feats[keep.view(-1).long()])
 

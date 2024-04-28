@@ -13,6 +13,8 @@ from lib.object_detector import detector
 from lib.tempura import TEMPURA
 from lib.ds_track import get_sequence
 
+import pickle as pkl
+
 conf = Config()
 
 for i in conf.args:
@@ -22,7 +24,7 @@ AG_dataset = AG(mode="test", datasize=conf.datasize, data_path=conf.data_path, f
                 filter_small_box=False if conf.mode == 'predcls' else True)
 dataloader = torch.utils.data.DataLoader(AG_dataset, shuffle=False, num_workers=0, collate_fn=cuda_collate_fn)
 
-gpu_device = torch.device('cuda:0')
+gpu_device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 object_detector = detector(train=False, object_classes=AG_dataset.object_classes, use_SUPPLY=True, mode=conf.mode).to(device=gpu_device)
 object_detector.eval()
 
@@ -97,10 +99,10 @@ start_time = time.time()
 with torch.no_grad():
     for b, data in enumerate(dataloader): 
         print('index: ',data[4], flush=True)
-        im_data = copy.deepcopy(data[0].cuda(0))
-        im_info = copy.deepcopy(data[1].cuda(0))
-        gt_boxes = copy.deepcopy(data[2].cuda(0))
-        num_boxes = copy.deepcopy(data[3].cuda(0))
+        im_data = copy.deepcopy(data[0])#.cuda(0))
+        im_info = copy.deepcopy(data[1])#.cuda(0))
+        gt_boxes = copy.deepcopy(data[2])#.cuda(0))
+        num_boxes = copy.deepcopy(data[3])#.cuda(0))
         gt_annotation = AG_dataset.gt_annotations[data[4]]
         video_id = AG_dataset.valid_video_names[data[4]]
         
@@ -110,13 +112,25 @@ with torch.no_grad():
             get_sequence(entry, gt_annotation, (im_info[0][:2]/im_info[0,2]).cpu().data,conf.mode)
         
         pred = model(entry,phase='test', unc=False) #pred['rel_features']
-        evaluator1.evaluate_scene_graph(gt_annotation, dict(pred))
-        evaluator2.evaluate_scene_graph(gt_annotation, dict(pred))
-        evaluator3.evaluate_scene_graph(gt_annotation, dict(pred))
+        video_pred_1 = evaluator1.evaluate_scene_graph(gt_annotation, dict(pred))
+        video_pred_2 = evaluator2.evaluate_scene_graph(gt_annotation, dict(pred))
+        video_pred_3 = evaluator3.evaluate_scene_graph(gt_annotation, dict(pred))
         #need to save video_pred_dict = video_id-> {frame_id1 : {'triplet_scores':[],
         #                                                           'triplet_labels':[],
         #                                                           'triplet_boxes':[] }} } as video_id/sgg_dict.pkl
-         
+
+        # TODO: save the results
+        # Create separate directory for each video and save the results in that directory
+        os.makedirs(conf.save_path+f"/{video_id}", exist_ok=True)
+        with open(conf.save_path+f"/{video_id}/with_constraint.pkl", 'wb') as f:
+            pkl.dump(video_pred_1, f)
+        with open(conf.save_path+f"/{video_id}/semi_constraint.pkl", 'wb') as f:
+            pkl.dump(video_pred_2, f)
+        with open(conf.save_path+f"/{video_id}/no_constraint.pkl", 'wb') as f:
+            pkl.dump(video_pred_3, f)
+        with open(conf.save_path+f"/{video_id}/pred.pkl", 'wb') as f:
+            pkl.dump(pred, f)
+
 total_time = time.time() - start_time
 total_time_str = str(datetime.timedelta(seconds=int(total_time)))
 print('Inference time {}'.format(total_time_str), flush=True)
