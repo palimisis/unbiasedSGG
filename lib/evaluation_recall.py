@@ -161,12 +161,12 @@ class BasicSceneGraphEvaluator:
                                                                                     method=self.constraint, threshold=self.semithreshold, 
                                                                                     tot_all_predicates = self.tot_all_predicates)
             
-            # video_pred_dict[frame_id] = {'triplet_scores':rel_scores,
-            #                              'triplet_labels':pred_triplets,
-            #                              'triplet_boxes':pred_triplet_boxes}
+            video_pred_dict[frame_id] = {'triplet_scores':rel_scores,
+                                         'triplet_labels':pred_triplets,
+                                         'triplet_boxes':pred_triplet_boxes}
             
            
-        # return video_pred_dict
+        return video_pred_dict
             
                 
             

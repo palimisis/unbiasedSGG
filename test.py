@@ -12,6 +12,9 @@ from lib.evaluation_recall import BasicSceneGraphEvaluator
 from lib.object_detector import detector
 from lib.tempura import TEMPURA
 from lib.ds_track import get_sequence
+import pickle as pkl
+import os
+
 
 conf = Config()
 
@@ -110,13 +113,23 @@ with torch.no_grad():
             get_sequence(entry, gt_annotation, (im_info[0][:2]/im_info[0,2]).cpu().data,conf.mode)
         
         pred = model(entry,phase='test', unc=False) #pred['rel_features']
-        evaluator1.evaluate_scene_graph(gt_annotation, dict(pred))
-        evaluator2.evaluate_scene_graph(gt_annotation, dict(pred))
-        evaluator3.evaluate_scene_graph(gt_annotation, dict(pred))
+        video_pred_1 = evaluator1.evaluate_scene_graph(gt_annotation, dict(pred))
+        video_pred_2 = evaluator2.evaluate_scene_graph(gt_annotation, dict(pred))
+        video_pred_3 = evaluator3.evaluate_scene_graph(gt_annotation, dict(pred))
         #need to save video_pred_dict = video_id-> {frame_id1 : {'triplet_scores':[],
         #                                                           'triplet_labels':[],
         #                                                           'triplet_boxes':[] }} } as video_id/sgg_dict.pkl
          
+        os.makedirs(conf.save_path+f"/{video_id}", exist_ok=True)
+        with open(conf.save_path+f"/{video_id}/with_constraint.pkl", 'wb') as f:
+            pkl.dump(video_pred_1, f)
+        with open(conf.save_path+f"/{video_id}/semi_constraint.pkl", 'wb') as f:
+            pkl.dump(video_pred_2, f)
+        with open(conf.save_path+f"/{video_id}/no_constraint.pkl", 'wb') as f:
+            pkl.dump(video_pred_3, f)
+        with open(conf.save_path+f"/{video_id}/pred.pkl", 'wb') as f:
+            pkl.dump(pred, f)
+
 total_time = time.time() - start_time
 total_time_str = str(datetime.timedelta(seconds=int(total_time)))
 print('Inference time {}'.format(total_time_str), flush=True)
